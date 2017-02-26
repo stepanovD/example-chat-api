@@ -256,12 +256,14 @@ def create_message():
         json_data = request.get_json()
         if not json_data:
             return jsonify({'message': 'No input data provided'}), 400
-        new_message, errors = message_schema.load(json_data)
+        post_message, errors = message_schema.load(json_data)
 
         if errors:
             return jsonify(errors), 422
 
-        new_message.user_id = g.user.get_id()
+        new_message = Message(content=post_message["content"], user_id=g.user.get_id())
+        # new_message.user_id = g.user.get_id()
+
         if "chat_id" in json_data.keys():
             if get_chat(json_data["chat_id"]):
                 new_message.chat_id = json_data["chat_id"]
