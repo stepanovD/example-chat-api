@@ -33,11 +33,12 @@ class ChatSchema(ma.Schema):
 
 class MessageSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'content','timestamp', 'readed', '_links')
+        fields = ('id', 'content','timestamp', 'readed', 'chat_id', '_links')
         # model = Message
+    # chat = ma.Nested(ChatSchema, allow_null=True, default=dict())
 
     _links = ma.Hyperlinks({
         'self': ma.URLFor('api.message', message_id='<id>'),
-        'author': ma.URLFor('api.user', user_id='<user_id>'),
-        'chat': ma.URLFor('api.chat', chat_id='<chat_id>')
+        'author': ma.URLFor('api.user', user_id='<user_id>')
+        # 'chat': ma.URLFor('api.chat', chat_id='<chat_id>')
     })
