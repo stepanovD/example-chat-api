@@ -201,7 +201,12 @@ def chat_messages(chat_id):
     if g.user is not None:
         chat = get_chat(chat_id)
         if chat is not None:
-            return Response(json.dumps(messages_schema.dump(chat.messages).data), mimetype='application/json')
+            page = 1
+            if request.args.has_key('page'):
+                page = int(request.args['page'])
+
+            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.id.desc()).paginate(page, 20)
+            return Response(json.dumps(messages_schema.dump(messages.items).data), mimetype='application/json')
         else:
             return jsonify({"result": False, "message": "Access is denied"}), 403
 
@@ -223,8 +228,12 @@ def get_chat(chat_id):
 @login_required
 def messages():
     if g.user is not None:
-        messages = Message.query.filter_by(chat_id=None).all()
-        return Response(json.dumps(messages_schema.dump(messages).data), mimetype='application/json')
+        page = 1
+        if request.args.has_key('page'):
+            page = int(request.args['page'])
+
+        messages = Message.query.filter_by(chat_id=None).order_by(Message.id.desc()).paginate(page, 20)
+        return Response(json.dumps(messages_schema.dump(messages.items).data), mimetype='application/json')
 
     return jsonify({"result": False, "message": "required authentication "}), 403
 
