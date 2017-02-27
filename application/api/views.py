@@ -6,14 +6,15 @@ from flask.ext.login import login_user, current_user, login_required, logout_use
 from application.domain.models import *
 from application.domain import *
 from application.api import api
+from application import app
 
 
-@api.before_request
-def before_request():
-    g.user = current_user
+# @api.before_request
+# def before_request():
+#     g.user = current_user
 
 
-@api.route('/')
+@api.route('/', methods=['GET', 'OPTIONS'])
 def index():
     links = dict()
     if g.user is None or not g.user.is_authenticated():
@@ -35,7 +36,8 @@ def login():
     data_json = request.get_json()
 
     if g.user is not None and g.user.is_authenticated():
-        return redirect(url_for('api.index'))
+        # return redirect(url_for('api.index'))
+        return jsonify(result=True, text="login successful"), 200
 
     session['remember_me'] = True
     user = User.query.filter_by(login=data_json["login"]).first_or_404()
@@ -49,10 +51,11 @@ def login():
         login_user(user, remember=remember_me)
 
         # flash('Login ="' + data_json["login"] + '", remember_me=' + str(True))
-        return redirect(url_for('api.index'))
+        # return redirect(url_for('api.index'))
+        return jsonify(result=True, text="login successful"), 200
     else:
         # flash('Invalid login or password',"error")
-        return redirect(url_for('api.index'))
+        return jsonify(result=False, text="invalid password"), 400
 
 
 @api.route('/logout/')
