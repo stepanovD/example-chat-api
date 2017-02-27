@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container" id="login-container">
+    <div class="row">
+        <form class="form-horizontal" id="form-login">
+            <div class="control-group">
+                <label class="control-label" for="login">login</label>
+
+                <div class="controls">
+                    <input type="text" id="login" placeholder="Login">
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="inputPassword">Password</label>
+
+                <div class="controls">
+                    <input type="password" id="inputPassword" placeholder="Password">
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="controls">
+                    <button type="button" class="btn btn-primary" onclick="login_request()">Sign in</button>
+                    <button type="button" class="btn">Sign up</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="container" id="chat-container">
+    <div class="row">
+        <h1>chat</h1>
+    </div>
+</div>
+
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
