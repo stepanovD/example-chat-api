@@ -1,12 +1,13 @@
 __author__ = 'dmitry'
 import json, datetime
 from flask import g, request, redirect, url_for, jsonify, session, Response
-from flask.ext.login import login_user, current_user, login_required, logout_user
+from flask_security import login_user, logout_user
+from flask_security.decorators import anonymous_user_required, auth_token_required
+from flask_security.utils import verify_password, encrypt_password
 
-from application.domain.models import *
 from application.domain import *
 from application.api import api
-from application import app
+from application import user_datastore
 
 
 # @api.before_request
@@ -15,12 +16,13 @@ from application import app
 
 
 @api.route('/', methods=['GET', 'OPTIONS'])
+@auth_token_required
 def index():
     links = dict()
-    if g.user is None or not g.user.is_authenticated():
+    if g.user.is_anonymous:
         links["login"] = url_for('api.login')
         links["registry"] = url_for('api.registry')
-    elif g.user is not None and g.user.is_authenticated():
+    else:
         links["logout"] = url_for('api.logout')
         links["self"] = url_for('api.user', user_id=g.user.get_id())
         links["users"] = url_for('api.users')
@@ -31,18 +33,15 @@ def index():
     return jsonify(_links=links)
 
 
-@api.route('/login/', methods=['POST'])
+@api.route('/login/', methods=['POST', 'OPTIONS'])
+@anonymous_user_required
 def login():
     data_json = request.get_json()
 
-    if g.user is not None and g.user.is_authenticated():
-        # return redirect(url_for('api.index'))
-        return jsonify(result=True, text="login successful"), 200
-
     session['remember_me'] = True
-    user = User.query.filter_by(login=data_json["login"]).first_or_404()
+    user = User.query.filter_by(email=data_json["email"]).first_or_404()
 
-    if user.verify_password(data_json["password"]):
+    if verify_password(data_json["password"], user.password):
         remember_me = False
         if 'remember_me' in session:
             remember_me = session['remember_me']
@@ -50,56 +49,55 @@ def login():
 
         login_user(user, remember=remember_me)
 
-        # flash('Login ="' + data_json["login"] + '", remember_me=' + str(True))
-        # return redirect(url_for('api.index'))
-        return jsonify(result=True, text="login successful"), 200
+        return jsonify(result=True, text="login successful", token=user.get_auth_token()), 200
     else:
-        # flash('Invalid login or password',"error")
         return jsonify(result=False, text="invalid password"), 400
 
 
 @api.route('/logout/')
+@auth_token_required
 def logout():
     logout_user()
-    return redirect(url_for('api.index'))
+    return jsonify(result=True, text="logout successful"), 200
 
 
-@api.route('/registry/', methods=['POST'])
+@api.route('/registry/', methods=['POST', "OPTIONS"])
+@anonymous_user_required
 def registry():
     data_json = request.get_json()
 
     session['remember_me'] = False
 
-    user_exists = db.session.query(db.exists().where(User.login == data_json["login"])).scalar()
+    user_exists = db.session.query(db.exists().where(User.email == data_json["email"])).scalar()
 
     if user_exists:
-        return jsonify(text="User %r already exist" % data_json["login"]), 400
+        return jsonify(text="User %r already exist" % data_json["email"]), 400
 
-    user = User(login=data_json["login"], role=Role.query.filter_by(role_name="User").first())
-    user.set_password(data_json["password"])
-
-    db.session.add(user)
+    created_user = user_datastore.create_user(email=data_json["email"], password=encrypt_password(''))
+    user_datastore.add_role_to_user(created_user, Role.query.get(2))
+    db.session.flush()
     db.session.commit()
     # flash("Registry successful. Please sign in.")
-    return redirect(url_for('api.index'))
+    return jsonify(result=True, text="registry successful", user_id=created_user.id), 200
 
 
 ################################################################################
 ############ USERS
 ################################################################################
 
-@api.route('/users/')
-@login_required
+@api.route('/users/', methods=["GET", "OPTIONS"])
+@auth_token_required
+# @auth_token_required
 def users():
     all_users = [u for u in User.query.all()]
     result = users_schema.dump(all_users).data
     return Response(json.dumps(result), mimetype='application/json')
 
 
-@api.route('/users/<user_id>/')
-@login_required
+@api.route('/users/<user_id>/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def user(user_id):
-    if g.user:
+    if g.user.is_authenticated:
         user = get_user(user_id)
         if user:
             return user_schema.jsonify(user)
@@ -107,7 +105,7 @@ def user(user_id):
     return jsonify({"result": False, "message": "required authentication "}), 403
 
 def get_user(user_id):
-    if g.user:
+    if g.user.is_authenticated:
         return User.query.get_or_404(user_id)
     return None
 
@@ -116,15 +114,15 @@ def get_user(user_id):
 ############ ROLES
 ################################################################################
 
-@api.route('/roles/')
-@login_required
+@api.route('/roles/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def roles():
     roles = Role.query.all()
     return Response(json.dumps(roles_schema.dump(roles).data), mimetype='application/json')
 
 
-@api.route('/roles/<role_id>/')
-@login_required
+@api.route('/roles/<role_id>/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def role(role_id):
     role = Role.query.get_or_404(role_id)
     return role_schema.jsonify(role)
@@ -134,18 +132,18 @@ def role(role_id):
 ############ CHATS
 ################################################################################
 
-@api.route('/chats/', methods=['GET'])
-@login_required
+@api.route('/chats/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def chats():
-    if g.user is not None:
+    if g.user.is_authenticated:
         chats = Chat.query.filter(Chat.users.contains(g.user)).all()
         return Response(json.dumps(chats_schema.dump(chats).data), mimetype='application/json')
     return jsonify({"result": False, "message": "required authentication "}), 403
 
 @api.route('/chats/', methods=['POST'])
-@login_required
+@auth_token_required
 def create_chat():
-    if g.user is not None:
+    if g.user.is_authenticated:
         data_json = request.get_json()
 
         chat = Chat(title=data_json["title"], owner_id=g.user.get_id())
@@ -160,10 +158,10 @@ def create_chat():
 
     return jsonify({"result": False, "message": "required authentication "}), 403
 
-@api.route('/chats/<chat_id>/')
-@login_required
+@api.route('/chats/<chat_id>/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def chat(chat_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         chat = get_chat(chat_id)
         if chat is not None:
             return chat_schema.jsonify(chat)
@@ -171,9 +169,9 @@ def chat(chat_id):
     return jsonify({"result": False, "message": "required authentication "}), 403
 
 @api.route('/chats/<chat_id>/', methods=['PUT'])
-@login_required
+@auth_token_required
 def update_chat(chat_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         chat = get_chat(chat_id)
         if chat is not None:
             data_json = request.get_json()
@@ -187,10 +185,10 @@ def update_chat(chat_id):
         else: return jsonify({"result": False, "message": "Access is denied"}), 403
     return jsonify({"result": False, "message": "required authentication "}), 403
 
-@api.route('/chats/<chat_id>/users/')
-@login_required
+@api.route('/chats/<chat_id>/users/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def chat_users(chat_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         chat = get_chat(chat_id)
         if chat is not None:
             return Response(json.dumps(users_schema.dump(chat.users).data), mimetype='application/json')
@@ -198,10 +196,10 @@ def chat_users(chat_id):
             return jsonify({"result": False, "message": "Access is denied"}), 403
     return jsonify({"result": False, "message": "required authentication "}), 403
 
-@api.route('/chats/<chat_id>/messages/')
-@login_required
+@api.route('/chats/<chat_id>/messages/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def chat_messages(chat_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         chat = get_chat(chat_id)
         if chat is not None:
             page = 1
@@ -217,7 +215,7 @@ def chat_messages(chat_id):
 
 
 def get_chat(chat_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         chat = Chat.query.get_or_404(chat_id)
         if g.user in chat.users:
             return chat
@@ -227,10 +225,10 @@ def get_chat(chat_id):
 ############ MESSAGES
 ################################################################################
 
-@api.route('/messages/', methods=['GET'])
-@login_required
+@api.route('/messages/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def messages():
-    if g.user is not None:
+    if g.user.is_authenticated:
         page = 1
         if request.args.has_key('page'):
             page = int(request.args['page'])
@@ -240,10 +238,10 @@ def messages():
 
     return jsonify({"result": False, "message": "required authentication "}), 403
 
-@api.route('/messages/<message_id>/')
-@login_required
+@api.route('/messages/<message_id>/', methods=["GET", "OPTIONS"])
+@auth_token_required
 def message(message_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         message = get_message(message_id)
         if message is not None:
             return message_schema.jsonify(message)
@@ -253,9 +251,9 @@ def message(message_id):
     return jsonify({"result": False, "message": "required authentication "}), 403
 
 @api.route('/messages/', methods=['POST'])
-@login_required
+@auth_token_required
 def create_message():
-    if g.user is not None:
+    if g.user.is_authenticated:
         json_data = request.get_json()
         if not json_data:
             return jsonify({'message': 'No input data provided'}), 400
@@ -279,7 +277,7 @@ def create_message():
     return jsonify({"result": False, "message": "required authentication "}), 403
 
 def get_message(message_id):
-    if g.user is not None:
+    if g.user.is_authenticated:
         message = Message.query.get_or_404(message_id)
         if message.chat_id is None or get_chat(message.chat_id):
             return message

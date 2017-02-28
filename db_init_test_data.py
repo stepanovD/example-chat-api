@@ -2,13 +2,11 @@
 __author__ = 'Дмитрий'
 
 import random, time
-from application import app, db
+from application import app, db, user_datastore
+from flask_security.utils import encrypt_password
 from application.domain import models
 
 db.init_app(app)
-
-user = models.User(login="user", password_hash="d41d8cd98f00b204e9800998ecf8427e", role_id=2)
-guest = models.User(login="guest", password_hash="d41d8cd98f00b204e9800998ecf8427e", role_id=1)
 
 chat = models.Chat(title="test chat", owner_id=1)
 
@@ -20,8 +18,14 @@ for i in range(1, 50):
         shared_messages.append(models.Message(content="test message %d" % i, user_id=random.choice(user_ids)))
 
 with app.app_context():
-    db.session.add(user)
-    db.session.add(guest)
+    user_role = models.Role.query.get(2)
+    guest_role = models.Role.query.get(3)
+
+    created_user = user_datastore.create_user(email='user', password=encrypt_password(''))
+    user_datastore.add_role_to_user(created_user, user_role)
+
+    created_guest = user_datastore.create_user(email='guest', password=encrypt_password(''))
+    user_datastore.add_role_to_user(created_guest, guest_role)
 
     db.session.flush()
 

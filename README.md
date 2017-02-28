@@ -7,6 +7,7 @@ dependencies:
 
 Flask
 Flask-Login
+Flask-Security
 Flask-SQLAlchemy
 SQLAlchemy
 sqlalchemy-migrate

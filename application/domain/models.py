@@ -4,6 +4,7 @@ __author__ = 'Дмитрий'
 import datetime
 from application.password import generate_password_hash, check_password_hash
 from application import db
+from flask.ext.security import UserMixin, RoleMixin
 
 # ROLE_GUEST = 0
 # ROLE_STUDENT = 1
@@ -11,13 +12,13 @@ from application import db
 # ROLE_EDITOR = 3
 # ROLE_ADMIN = 4
 
-class Role(db.Model):
+class Role(db.Model, RoleMixin):
     id = db.Column(db.Integer, primary_key=True)
-    role_name = db.Column(db.String(64), index=True, unique=True)
-    users = db.relationship('User', backref='role', lazy='dynamic')
+    name = db.Column(db.String(64), index=True, unique=True)
+    description = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
-        return '<Role %r>' % (self.role_name)
+        return '<Role %r>' % (self.name)
 
     def is_guest(self):
         return self.role_name == "Guest"
@@ -31,35 +32,34 @@ class Role(db.Model):
     def show_admin_panel(self):
         return self.is_admin()
 
+roles_users = db.Table('roles_users',
+                       db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
+                       db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
+)
+
 ChatUsers = db.Table('chat_users', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('chat_id', db.Integer, db.ForeignKey('chat.id'))
 )
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    login = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
-    role_id = db.Column(db.SmallInteger, db.ForeignKey('role.id'))
+    email = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    active = db.Column(db.Boolean(), default=True)
+
+    confirmed_at = db.Column(db.DateTime())
+    last_login_at = db.Column(db.DateTime())
+    current_login_at = db.Column(db.DateTime())
+    last_login_ip = db.Column(db.String(45))
+    current_login_ip = db.Column(db.String(45))
+    login_count = db.Column(db.Integer)
+
+    roles = db.relationship('Role', secondary="roles_users", backref=db.backref('users', lazy='dynamic'))
     chats = db.relationship('Chat', secondary="chat_users", backref="chats", lazy='dynamic')
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def verify_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
     def __repr__(self):
-        return '<User %r>' % (self.login)
-
-    def is_authenticated(self):
-        return True
-
-    def is_active(self):
-        return True
-
-    def is_anonymous(self):
-        return False
+        return '<User %r>' % (self.email)
 
     def get_id(self):
         try:

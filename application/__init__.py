@@ -1,7 +1,9 @@
 __author__ = 'dmitry'
 
 from flask import Flask, g, request
-from flask.ext.login import LoginManager, current_user
+# from flask.ext.login import LoginManager, current_user
+from flask.ext.security import Security, SQLAlchemyUserDatastore
+from flask.ext.security.core import current_user
 from flask_marshmallow import Marshmallow
 
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -13,9 +15,15 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
-lm = LoginManager()
-lm.init_app(app)
-lm.login_view = 'login'
+from application.domain.models import User, Role
+
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+security = Security(app, user_datastore)
+
+
+# lm = LoginManager()
+# lm.init_app(app)
+# lm.login_view = 'login'
 
 from flask.ext.mail import Mail
 mail = Mail(app)
@@ -26,11 +34,9 @@ from application.api import api
 app.register_blueprint(api, url_prefix='/api')
 # app.register_blueprint(main)
 
-from application.domain.models import User, Role
-
-@lm.user_loader
-def load_user(id):
-    return User.query.get(int(id))
+# @lm.user_loader
+# def load_user(id):
+#     return User.query.get(int(id))
 
 @app.before_request
 def before_request():

@@ -4,12 +4,11 @@ from models import *
 
 class UserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'login', '_links')
+        fields = ('id', 'email', '_links')
         model = User
 
     _links = ma.Hyperlinks({
         'self': ma.URLFor('api.user', user_id='<id>'),
-        'role': ma.URLFor('api.role', role_id='<role_id>'),
         'chats': ma.URLFor('api.chats'),
         'logout': ma.URLFor('api.logout')
     })

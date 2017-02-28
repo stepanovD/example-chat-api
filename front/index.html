@@ -13,10 +13,10 @@
     <div class="row">
         <form class="form-horizontal" id="form-login">
             <div class="control-group">
-                <label class="control-label" for="login">login</label>
+                <label class="control-label" for="email">Email</label>
 
                 <div class="controls">
-                    <input type="text" id="login" placeholder="Login">
+                    <input type="text" id="email" placeholder="Email">
                 </div>
             </div>
             <div class="control-group">
@@ -29,17 +29,16 @@
             <div class="control-group">
                 <div class="controls">
                     <button type="button" class="btn btn-primary" onclick="login_request()">Sign in</button>
-                    <button type="button" class="btn">Sign up</button>
+                    <button type="button" class="btn" onclick="registry_request()">Sign up</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-<div class="container" id="chat-container">
-    <div class="row">
-        <h1>chat</h1>
-    </div>
+<div class="row" id="chat-container">
+    <div class="span9" id="chat_messages"></div>
+    <div class="span3" id="users_panel"></div>
 </div>
 
 <script src="http://code.jquery.com/jquery-latest.js"></script>
