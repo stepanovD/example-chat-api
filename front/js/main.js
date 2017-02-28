@@ -2,8 +2,8 @@
  * Created by dmitry on 27.02.2017.
  */
 
-api_domain = "http://127.0.0.1:5000";
-//api_domain = "http://u22901.netangels.ru";
+//api_domain = "http://127.0.0.1:5000";
+api_domain = "http://u22901.netangels.ru";
 __r = {};
 auth_token = '';
 
@@ -129,11 +129,27 @@ function load_shared_messages() {
 }
 
 function append_message(message_resource) {
-    $('#chat_messages').prepend('<div class="row" id="msg-' + message_resource.id + '">' +
-    '<div class="span9 well well-small" id="msg-' + message_resource.id + '-text"><p class="msg-text">' + message_resource.content + '</p>' +
-    '<div class="msg-time"><span>' + message_resource.timestamp + '</span></div></div>'+
-    '<div class="span3" id="msg-' + message_resource.id + '-author"></div>'+
-    '</div>');
+    $('#chat_messages').prepend('<div class="well well-small" id="msg-' + message_resource.id + '">'+
+    '<p class="msg-text" id="msg-' + message_resource.id + '-text">' + message_resource.content + '</p>' +
+    '<div class="msg-meta">'+
+    '<span class="msg-time">' + message_resource.timestamp + '</span>'+
+    '<span class="msg-author" id="msg-' + message_resource.id + '-author"></span>'+
+    '</div></div>');
+
+    append_author(message_resource.id, message_resource._links.author);
+}
+
+function append_author(message_id, author_url) {
+    $.ajax({
+        beforeSend: function (request) {
+            request.setRequestHeader("X-Auth-Token", auth_token);
+        },
+        dataType: "json",
+        url: api_domain + author_url,
+        success: function (data) {
+            $('#msg-' + message_id + '-author').append('<p class="text-info">' + data.email + '</p>')
+        }
+    });
 }
 
 function init_chat(){
