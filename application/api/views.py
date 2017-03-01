@@ -73,7 +73,7 @@ def registry():
     if user_exists:
         return jsonify(text="User %r already exist" % data_json["email"]), 400
 
-    created_user = user_datastore.create_user(email=data_json["email"], password=encrypt_password(''))
+    created_user = user_datastore.create_user(email=data_json["email"], password=encrypt_password(data_json["password"]))
     user_datastore.add_role_to_user(created_user, Role.query.get(2))
     db.session.flush()
     db.session.commit()
