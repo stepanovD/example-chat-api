@@ -35,10 +35,30 @@
         </form>
     </div>
 </div>
-
-<div class="row" id="chat-container">
-    <div class="span9" id="chat_messages"></div>
-    <div class="span3" id="users_panel"></div>
+<div class="container-fluid" id="chat-container" style="display: none">
+    <div class="row">
+        <div class="col-lg-9" id="chat_messages"></div>
+        <div class="col-lg-3" id="chats_panel">
+            <div id="fixed-chat">
+                <h3>Chats</h3>
+                <a class="chat-selector" href="#" onclick="load_chat(undefined)">
+                    <div class="row">
+                        Общий чат
+                    </div>
+                </a>
+            </div>
+            <div id="dynamic-chats"></div>
+        </div>
+    </div>
+    <div class="row" id="chat-container-form">
+        <form class="form-horizontal" id="form-message">
+            <div class="form-group">
+                <textarea class="form-control" id="inputMessage" rows="3"></textarea>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="send_message()">Send</button>
+            <button type="button" class="btn" onclick="refresh_chat()">Refresh chat</button>
+        </form>
+    </div>
 </div>
 
 <script src="http://code.jquery.com/jquery-latest.js"></script>
