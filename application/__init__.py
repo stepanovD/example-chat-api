@@ -20,18 +20,19 @@ from application.domain.models import User, Role
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 
-
 # lm = LoginManager()
 # lm.init_app(app)
 # lm.login_view = 'login'
 
 from flask.ext.mail import Mail
+
 mail = Mail(app)
 
 from application.api import api
 
-
 app.register_blueprint(api, url_prefix='/api')
+
+
 # app.register_blueprint(main)
 
 # @lm.user_loader
@@ -64,6 +65,7 @@ def before_request():
 
         return resp
 
+
 @app.after_request
 def after_request(resp):
     """ Set origin for GET, POST, PUT, DELETE requests """
@@ -74,11 +76,9 @@ def after_request(resp):
     if request.method != 'OPTIONS' and 'Origin' in request.headers:
         h['Access-Control-Allow-Origin'] = request.headers['Origin']
 
-
     return resp
+
 
 @app.errorhandler(404)
 def page_not_found(e):
     return e, 404
-
-
